@@ -1,75 +1,135 @@
-import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { showErrorToast, showSuccessToast } from './ToastMessage.jsx';
+import NewsSearch from './NewsSearch.jsx';
+import NewsSort from './NewsSort.jsx';
+import NewsCard from './NewsCard.jsx';
+import NewsLoader from './NewsLoader.jsx';
+import NewsError from './NewsError.jsx';
+import LoadMoreButton from './LoadMoreButton.jsx';
+import { getNewsArticles } from '../services/newsService.js';
 
-export default function NewsSection({ setNews }) {
-
+function NewsSection({ onArticlesChange }) {
   const [articles, setArticles] = useState([]);
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortBy, setSortBy] = useState('date');
+  const [visibleCount, setVisibleCount] = useState(5);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  async function fetchNews() {
-
+  const loadNews = useCallback(async (forceRefresh = false) => {
     try {
+      setLoading(true);
+      setError('');
 
-      const res = await axios.get(
-        `https://newsapi.org/v2/top-headlines?country=us&pageSize=10&apiKey=${import.meta.env.VITE_NEWS_API_KEY}`
-      );
+      const latestArticles = await getNewsArticles('space OR technology', forceRefresh);
 
-      setArticles(res.data.articles);
+      setArticles(latestArticles);
+      onArticlesChange(latestArticles);
+      setVisibleCount(5);
 
-      setNews(res.data.articles);
-
-      localStorage.setItem(
-        "news",
-        JSON.stringify(res.data.articles)
-      );
-
-    } catch (err) {
-      console.log(err);
+      if (forceRefresh) showSuccessToast('News refreshed successfully');
+    } catch {
+      setError('Unable to fetch latest news.');
+      showErrorToast('News API fetch failed');
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [onArticlesChange]);
 
   useEffect(() => {
+    loadNews();
+  }, [loadNews]);
 
-    const saved = localStorage.getItem("news");
+  useEffect(() => {
+    // Debounce prevents a new search on every single key press.
+    const timerId = setTimeout(() => {
+      setDebouncedSearch(searchText);
+    }, 350);
 
-    if (saved) {
-      setArticles(JSON.parse(saved));
-    } else {
-      fetchNews();
+    return () => clearTimeout(timerId);
+  }, [searchText]);
+
+  useEffect(() => {
+    if (debouncedSearch) {
+      showSuccessToast('Search updated');
     }
+  }, [debouncedSearch]);
 
-  }, []);
+  const filteredArticles = useMemo(() => {
+    const keyword = debouncedSearch.toLowerCase().trim();
+
+    const matchingArticles = articles.filter((article) => {
+      if (!keyword) return true;
+
+      return [article.title, article.source, article.author, article.description]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword);
+    });
+
+    return [...matchingArticles].sort((a, b) => {
+      if (sortBy === 'source') {
+        return a.source.localeCompare(b.source);
+      }
+
+      return new Date(b.publishedAt) - new Date(a.publishedAt);
+    });
+  }, [articles, debouncedSearch, sortBy]);
+
+  const visibleArticles = filteredArticles.slice(0, visibleCount);
 
   return (
-    <div className="grid md:grid-cols-2 gap-4 mb-5">
-
-      {articles.map((article, index) => (
-
-        <div
-          key={index}
-          className="bg-white p-4 rounded shadow"
-        >
-
-          <img
-            src={article.urlToImage}
-            className="h-40 w-full object-cover"
-          />
-
-          <h2 className="font-bold mt-2">
-            {article.title}
-          </h2>
-
-          <p>{article.source.name}</p>
-
-          <a
-            href={article.url}
-            target="_blank"
-            className="text-blue-500"
-          >
-            Read More
-          </a>
-
+    <section className="panel news-section" id="news-dashboard">
+      <div className="panel-header news-header">
+        <div>
+          <p className="eyebrow">Part 2: News dashboard</p>
+          <h2>Mission News Feed</h2>
+          <p className="section-description">
+            Latest space and technology articles, cached for 15 minutes to reduce extra API calls.
+          </p>
         </div>
-      ))}
-    </div>
+
+        <button className="primary-button" onClick={() => loadNews(true)} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh News'}
+        </button>
+      </div>
+
+      <div className="news-controls">
+        <NewsSearch value={searchText} onChange={setSearchText} />
+        <NewsSort value={sortBy} onChange={setSortBy} />
+      </div>
+
+      {loading && <NewsLoader />}
+
+      {!loading && error && <NewsError message={error} onRetry={() => loadNews(true)} />}
+
+      {!loading && !error && visibleArticles.length === 0 && (
+        <div className="news-error">
+          <p>No matching articles found.</p>
+        </div>
+      )}
+
+      {!loading && !error && visibleArticles.length > 0 && (
+        <>
+          <p className="news-count">
+            Showing {visibleArticles.length} of {filteredArticles.length} articles
+          </p>
+
+          <div className="news-grid">
+            {visibleArticles.map((article) => (
+              <NewsCard article={article} key={article.id} />
+            ))}
+          </div>
+
+          <LoadMoreButton
+            hidden={visibleCount >= filteredArticles.length}
+            onClick={() => setVisibleCount((currentCount) => currentCount + 5)}
+          />
+        </>
+      )}
+    </section>
   );
 }
+
+export default NewsSection;

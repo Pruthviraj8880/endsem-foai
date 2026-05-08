@@ -1,0 +1,33 @@
+body.dark-theme {
+  --page-bg: #08111f;
+  --nav-bg: rgba(8, 17, 31, 0.84);
+  --card-bg: rgba(18, 27, 42, 0.86);
+  --soft-bg: rgba(255, 255, 255, 0.07);
+  --main-text: #f8fafc;
+  --muted-text: #aab6c7;
+  --accent: #f4a261;
+  --border-color: rgba(255, 255, 255, 0.12);
+  --grid-line: rgba(255, 255, 255, 0.12);
+  --toggle-bg: #334155;
+  --location-card-start: rgba(249, 115, 22, 0.16);
+  --glow-one: rgba(244, 162, 97, 0.2);
+  --glow-two: rgba(37, 99, 235, 0.18);
+  --card-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+
+body.light-theme {
+  --page-bg: #f6efe4;
+  --nav-bg: rgba(255, 250, 241, 0.86);
+  --card-bg: rgba(255, 255, 255, 0.82);
+  --soft-bg: rgba(249, 115, 22, 0.08);
+  --main-text: #1f2933;
+  --muted-text: #6b5f55;
+  --accent: #c2410c;
+  --border-color: rgba(120, 81, 45, 0.16);
+  --grid-line: rgba(120, 81, 45, 0.18);
+  --toggle-bg: #ead8c2;
+  --location-card-start: rgba(251, 146, 60, 0.2);
+  --glow-one: rgba(251, 146, 60, 0.22);
+  --glow-two: rgba(255, 255, 255, 0.45);
+  --card-shadow: 0 20px 60px rgba(120, 81, 45, 0.12);
+}

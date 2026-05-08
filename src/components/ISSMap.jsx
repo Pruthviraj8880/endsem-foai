@@ -1,28 +1,73 @@
-import { MapContainer, TileLayer, Marker, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import { useEffect } from 'react';
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 
-// Fix for default Leaflet markers missing in new builds
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
-});
+function MapAutoCenter({ position }) {
+  const map = useMap();
 
-export default function ISSMap({ pos, path }) {
-  const center = (pos && pos.lat !== 0) ? [pos.lat, pos.lon] : [0, 0];
-  
+  useEffect(() => {
+    // flyTo creates a smoother visual movement when the ISS position changes.
+    map.flyTo([position.lat, position.lng], map.getZoom(), {
+      animate: true,
+      duration: 1.2
+    });
+  }, [map, position]);
+
+  return null;
+}
+
+function ISSMap({ position, positions }) {
+  const path = positions.map((item) => [item.lat, item.lng]);
+
   return (
-    <MapContainer 
-      center={center} 
-      zoom={3} 
-      className="w-full h-96 rounded-xl border border-gray-100 shadow-inner"
-    >
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {pos && pos.lat !== 0 && (
-        <Marker position={[pos.lat, pos.lon]} />
-      )}
-      <Polyline positions={path} color="#e53e3e" weight={4} />
-    </MapContainer>
+    <section className="panel map-panel">
+      <div className="panel-header">
+        <div>
+          <p className="eyebrow">Interactive map</p>
+          <h2>ISS Orbit Path</h2>
+        </div>
+        <span className="mini-badge">{positions.length} points</span>
+      </div>
+
+      <div className="map-wrapper">
+        <MapContainer center={[position.lat, position.lng]} zoom={3} scrollWheelZoom>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          <Polyline positions={path} pathOptions={{ color: '#f4a261', weight: 4, opacity: 0.85 }} />
+
+          <CircleMarker
+            center={[position.lat, position.lng]}
+            radius={12}
+            pathOptions={{
+              color: '#ffffff',
+              fillColor: '#f97316',
+              fillOpacity: 1,
+              weight: 3
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -8]}>
+              ISS live position
+            </Tooltip>
+            <Popup>
+              <strong>International Space Station</strong>
+              <br />
+              Latitude: {position.lat.toFixed(4)}
+              <br />
+              Longitude: {position.lng.toFixed(4)}
+              <br />
+              Speed: {Math.round(position.speed).toLocaleString()} km/h
+              <br />
+              Time: {new Date(position.timestamp).toLocaleTimeString()}
+            </Popup>
+          </CircleMarker>
+
+          <MapAutoCenter position={position} />
+        </MapContainer>
+      </div>
+    </section>
   );
 }
+
+export default ISSMap;
